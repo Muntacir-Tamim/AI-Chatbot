@@ -1,63 +1,152 @@
-# RAG Chatbot to chat with PDFs using Gemini
+# 📚 PDF AI Chatbot
 
-This project is a web application that leverages advanced AI models to perform Question Answering (QA) from PDF documents. It uses Retrieval-Augmented Generation (RAG) techniques to provide accurate and context-aware answers to user queries based on the content of the uploaded PDF files.
+> Upload your PDFs and chat with them. Get accurate answers with page references, in English or Bangla.
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-ff4b4b)
+![Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-8b5cf6)
+![FAISS](https://img.shields.io/badge/Vector%20DB-FAISS-green)
+
+## Overview
+
+PDF AI Chatbot is a Retrieval-Augmented Generation (RAG) application. It reads one or more PDF files, indexes their content, and answers your questions using **only the information found in those documents**. Every answer shows which file and page it came from.
 
 ## Features
 
-- **PDF Text Extraction**: Extract text from multiple PDF documents.
-- **Text Chunking**: Split the extracted text into manageable chunks for processing.
-- **Google Generative AI Embeddings**: Create vector representations of text chunks using Google's advanced AI models.
-- **FAISS Vector Store**: Utilize FAISS for efficient similarity search among text chunks.
-- **Conversational QA Chain**: Integrate Google's Gemini model to provide detailed and context-aware answers to user questions.
-- **Streamlit Interface**: A user-friendly interface to upload PDFs and ask questions interactively.
+- **Multi-PDF chat:** upload and query several PDFs together.
+- **Scanned PDF support:** pages without selectable text are read with Gemini OCR (Bangla supported).
+- **Grounded answers:** the model answers only from the document and says so when the answer is missing.
+- **Source references:** file name and page number are shown for each answer.
+- **Smart retrieval:** MMR search gives relevant and diverse chunks; summaries use chunks from the whole document.
+- **Quick actions:** one-click Summary, Key Points, Important Numbers and Dates, and Explain Simply.
+- **Answer styles:** choose Concise or Detailed.
+- **Language aware:** replies in the language you ask in.
+- **Reliable:** automatic fallback to another Gemini model if one is busy (503).
+- **Modern UI:** clean chat interface, document stats, and chat download.
 
-## Installation
+## How it works
 
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/Sahiltr/qa-with-pdf-using-gemini.git
-    cd qa-with-pdf-using-gemini
-    ```
+```
+PDF ──► Extract text (PyMuPDF / Gemini OCR)
+    ──► Split into chunks (with page numbers)
+    ──► Embeddings (gemini-embedding-001)
+    ──► FAISS vector index
+Question ──► Embed ──► MMR search ──► Top chunks ──► Gemini ──► Streamed answer + sources
+```
 
-2. Create a virtual environment and activate it:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    ```
+## Tech Stack
 
-3. Install the required packages:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4. Set up your Google API key by creating a `.env` file in the project directory:
-    ```env
-    GOOGLE_API_KEY=your_google_api_key
-    ```
-
-## Usage
-
-1. Run the Streamlit application:
-    ```bash
-    streamlit run app.py
-    ```
-
-2. Open your web browser and go to `http://localhost:8501`.
-
-3. Use the interface to upload PDF files and ask questions based on the content of those files.
+| Layer | Technology |
+|---|---|
+| Interface | Streamlit |
+| PDF reading | PyMuPDF, Gemini OCR |
+| Embeddings | `gemini-embedding-001` |
+| Vector search | FAISS |
+| Answer model | Gemini 3.x Flash (with fallback list) |
+| Language | Python |
 
 ## Project Structure
 
-- `app.py`: The main script for running the Streamlit application.
-- `requirements.txt`: The list of required Python packages.
-- `.env`: Environment variables file containing your Google API key.
+```
+AI-Chatbot-main/
+├── app.py              # Main application
+├── requirements.txt    # Python dependencies
+├── .env                # Your API key (not committed)
+└── README.md
+```
 
-## Example
+## Getting Started
 
-Upload one or more PDF files using the sidebar, then enter your question in the text input box. The application will process the PDFs, create text chunks, generate embeddings, and provide a detailed answer based on the context found in the documents.
+### 1. Clone the project
 
-## Contributing
+```bash
+git clone <your-repo-url>
+cd AI-Chatbot-main
+```
 
-Contributions are welcome! Please create an issue or submit a pull request for any features, bug fixes, or enhancements.
+### 2. Create a virtual environment
 
+```bash
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # macOS / Linux
+```
 
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+`requirements.txt`:
+
+```
+streamlit>=1.40
+google-genai>=1.0
+faiss-cpu
+numpy
+pymupdf
+python-dotenv
+```
+
+### 4. Add your API key
+
+Get a free key from [Google AI Studio](https://aistudio.google.com/apikey) and create a `.env` file:
+
+```
+GOOGLE_API_KEY=your_api_key_here
+```
+
+You can also paste the key in the sidebar when the app starts.
+
+### 5. Run the app
+
+```bash
+streamlit run app.py
+```
+
+## Usage
+
+1. Upload one or more PDFs from the sidebar.
+2. Click **Process PDFs** and wait until the stats appear.
+3. Ask a question, or use a quick action.
+4. Open **Sources** under an answer to see the pages used.
+
+## Configuration
+
+Edit these values at the top of `app.py`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `CHAT_MODELS` | Gemini 3.x list | Models tried in order |
+| `CHUNK_SIZE` | 1000 | Characters per chunk |
+| `CHUNK_OVERLAP` | 200 | Overlap between chunks |
+| `TOP_K` | 8 | Chunks used per question |
+| `MAX_OCR_PAGES` | 40 | Max scanned pages to OCR |
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `404 NOT_FOUND` model error | Update model names in `CHAT_MODELS` |
+| `503 UNAVAILABLE` | Model is busy; the app retries other models automatically |
+| No answer appears | Wait for the timeout (60 s) and ask again; check the error shown |
+| "No readable text found" | The PDF may be empty or corrupted |
+| Rate limit errors | Free API keys have limits; wait a minute and retry |
+
+## Limitations
+
+- Index is kept in memory, so it resets when the page is refreshed.
+- OCR is limited to the first 40 scanned pages per file.
+- Answer quality depends on the PDF text quality.
+
+## Future Improvements
+
+- Save chat history and indexes per user
+- Voice input in Bangla and English
+- Support for Word and text files
+- Online deployment
+
+## License
+
+This project is for educational use. Add a license of your choice (for example MIT) before publishing.
